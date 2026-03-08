@@ -1,0 +1,309 @@
+diff --git a/README.md b/README.md
+index 07adbf0..7473a2d 100644
+--- a/README.md
++++ b/README.md
+@@ -1,103 +1,187 @@
+-# Redis Session Management Project
++# Spring Security Multi‑Factor Authentication (MFA) with Redis Token Management
+
+ ## Description
+-The **Redis Session Management** project is a Spring Boot-based application designed to manage user sessions using **Redis** as a session store. This project makes use of modern back-end technologies and paradigms, including **Spring Session**, **Spring Security**, and **Spring Data Redis**, along with **PostgreSQL** for additional data persistence needs. It is structured to ensure secure, scalable, and high-performance session management.
+-
+-## Features
+-- **Session Management with Redis**: Leverages Redis as a highly scalable and efficient session storage solution using Spring Session.
+-- **Spring Data JPA**: Supports data persistence with PostgreSQL.
+-- **Spring Security Integration**: Provides security mechanisms for user authentication and authorization.
+-- **JWT-Based Authentication**: Uses JSON Web Tokens (JWT) to securely manage stateless authentication.
+-- **Validation**: Ensures data integrity and request validation using Spring's Validation framework.
+-- **Testing**: Includes robust testing configurations for application reliability.
++A Spring Boot application that demonstrates secure authentication using JWTs, Redis-backed token management, and Time‑based One‑Time Password (TOTP) Multi‑Factor Authentication (MFA). Users can register, log in, set up MFA with a QR code (Google Authenticator or compatible apps), confirm MFA, and verify MFA during login. Secrets are encrypted at rest using AES‑GCM.
++
++## Key Features
++- JWT‑based stateless authentication (access + refresh tokens)
++- Redis token store with blacklisting and rotation support
++- TOTP MFA (Google Authenticator compatible)
++  - QR code generation (ZXing)
++  - OTP URI provisioning
++  - First‑time MFA confirmation flow
++- Encrypted MFA secrets at rest (AES/GCM/NoPadding)
++- Role‑based authorization with Spring Security
++- PostgreSQL persistence via Spring Data JPA
++- Bean validation for request payloads
++
++## Tech Stack & Dependencies
++- Spring Boot (Web, Security, Validation, Data JPA)
++- Spring Data Redis
++- JSON Web Token (JJWT: `jjwt-api`, `jjwt-impl`, `jjwt-jackson`)
++- PostgreSQL Driver
++- Google Authenticator (`com.warrenstrange:googleauth`)
++- ZXing (`com.google.zxing:core`, `com.google.zxing:javase`)
++- Lombok
++- JUnit + Spring Security Test
+
+ ## Prerequisites
+-Before running the application, ensure you have the following installed on your system:
+-- **Java 17 or above**
+-- **Maven** (or alternative build tools for Java projects)
+-- **Redis** (set up and running)
+-- **PostgreSQL** (set up and running)
+-
+-## Stack and Dependencies
+-The application uses the following dependencies:
+-1. **Spring Boot Starters**:
+-    - `spring-boot-starter-data-jpa`: Provides JPA and repository support.
+-    - `spring-boot-starter-data-redis`: Enables integration with Redis.
+-    - `spring-session-data-redis`: Manages HTTP session data in Redis.
+-    - `spring-boot-starter-security`: Adds authentication and authorization capabilities.
+-    - `spring-boot-starter-web`: RESTful API development support.
+-    - `spring-boot-starter-validation`: Validation for request and data models.
+-2. **PostgreSQL**:
+-    - PostgreSQL driver for interacting with relational databases.
+-3. **JWT (JSON Web Token)**:
+-    - `jjwt-api`, `jjwt-impl`, `jjwt-jackson`: For creating, parsing, and validating JWTs.
+-4. **Lombok**:
+-    - Simplifies Java development by auto-generating boilerplate code such as getters, setters, and constructors.
+-5. **Testing**:
+-    - `spring-boot-starter-test` and `spring-security-test` for unit and integration tests.
+-
+-## Configuration
+-The application requires a few configurations for connecting to Redis, PostgreSQL, and other external dependencies. These configurations can be included in the `application.properties` or `application.yml` file.
+-
+-### Example Configuration
+-```properties
+-# Redis Configuration
+-spring.session.store-type=redis
+-spring.redis.host=localhost
+-spring.redis.port=6379
+-
+-# PostgreSQL Database Configuration
+-spring.datasource.url=jdbc:postgresql://localhost:5432/your_database
+-spring.datasource.username=your_username
+-spring.datasource.password=your_password
+-
+-# JWT Configuration
+-jwt.secret=your_jwt_secret_key
+-jwt.expiration=3600
+-```
+-
+-Replace `your_database`, `your_username`, `your_password`, and `your_jwt_secret_key` with actual values specific to your environment.
+-
+-## Building and Running
+-1. Clone the repository to your local machine.
+-2. Navigate to the project directory.
+-3. Build and package the application using Maven:
+-```shell script
+-mvn clean install
+-```
+-4. Run the application:
+-```shell script
+-mvn spring-boot:run
++- Java 17+
++- Maven
++- Redis running locally (default: `localhost:6379`)
++- PostgreSQL running locally
++
++## Configuration (application.yml)
++Set the following properties as needed:
++
++```yaml
++spring:
++  datasource:
++    url: jdbc:postgresql://localhost:5432/your_database
++    username: your_username
++    password: your_password
++  jpa:
++    hibernate:
++      ddl-auto: update
++  redis:
++    host: localhost
++    port: 6379
++
++jwt:
++  expiration: 900000           # e.g., 15 minutes (ms)
++  refreshExpiration: 604800000 # e.g., 7 days (ms)
++
++app:
++  mfaTokenExpiration: 300       # seconds, temporary MFA token lifetime
++  security:
++    encryption-key: <BASE64_AE S_KEY> # 128/192/256-bit AES key, Base64-encoded
++
++mfa:
++  app:
++    name: Spring MFA Demo
+ ```
+-5. The application should now be running on the default port, e.g., `http://localhost:8080`.
+
+-## Testing
+-The project includes unit and integration tests leveraging:
+-- `spring-boot-starter-test`
+-- `spring-security-test`
+-
+-To run tests, execute the following:
+-```shell script
+-mvn test
+-```
+-
+-## Usage
+-Once the application is running, you can access the RESTful API for session management and user security. Examples include:
+-- **User Authentication and JWT Generation**.
+-- **Session Management (via Redis)**.
+-- **Secured Endpoints** (accessible through JWT authentication).
+-- CRUD operations with PostgreSQL data using JPA.
+-
+-API endpoints and detailed documentation can be generated or added later (e.g., using tools like Swagger for easier interaction).
++Notes:
++- `app.security.encryption-key` must be a Base64‑encoded AES key. Example (256‑bit): generate 32 random bytes and Base64‑encode them.
++- `mfa.app.name` appears in the QR label (e.g., in Google Authenticator).
++
++## Build & Run
++- Build: `mvn clean install`
++- Run: `mvn spring-boot:run`
++- Default base URL: `http://localhost:8080`
++
++## Authentication flows
++
++### Login and MFA Verification Flow
++![Login and MFA Verification Flow](https://mermaid.ink/img/c2VxdWVuY2VEaWFncmFtCiAgICBwYXJ0aWNpcGFudCBVc2VyCiAgICBwYXJ0aWNpcGFudCBBdXRoQ29udHJvbGxlcgogICAgcGFydGljaXBhbnQgQXV0aFNlcnZpY2UKICAgIHBhcnRpY2lwYW50IFRva2VuUmVwb3NpdG9yeSAoUmVkaXMpCiAgICBwYXJ0aWNpcGFudCBEYXRhYmFzZSAoUG9zdGdyZVNRTCkKCiAgICBVc2VyLT4-QXV0aENvbnRyb2xsZXI6IFBPU1QgL2FwaS9hdXRoL2xvZ2luICh1c2VybmFtZSwgcGFzc3dvcmQpCiAgICBBdXRoQ29udHJvbGxlci0-PkF1dGhTZXJ2aWNlOiBsb2dpbihsb2dpblJlcXVlc3QpCiAgICBBdXRoU2VydmljZS0-PkRhdGFiYXNlOiBGaW5kIFVzZXIgYnkgdXNlcm5hbWUKICAgIEF1dGhTZXJ2aWNlLT4-QXV0aFNlcnZpY2U6IEF1dGhlbnRpY2F0ZSBjcmVkZW50aWFscwogICAgCiAgICBhbHQgTUZBIE5PVCBFbmFibGVkCiAgICAgICAgQXV0aFNlcnZpY2UtPj5Ub2tlblJlcG9zaXRvcnk6IFN0b3JlIEpXVCB0b2tlbnMgKEFjY2VzcywgUmVmcmVzaCkKICAgICAgICBBdXRoU2VydmljZS0tPj5Vc2VyOiAyMDAgT0sgKEFjY2Vzc1Rva2VuLCBSZWZyZXNoVG9rZW4sIG1mYVJlcXVpcmVkOiBmYWxzZSkKICAgIGVsc2UgTUZBIEVuYWJsZWQKICAgICAgICBBdXRoU2VydmljZS0-PkF1dGhTZXJ2aWNlOiBHZW5lcmF0ZSB0ZW1wb3JhcnkgbWZhVG9rZW4gKFVVSUQpCiAgICAgICAgQXV0aFNlcnZpY2UtPj5Ub2tlblJlcG9zaXRvcnk6IFN0b3JlIG1mYVRva2VuIHdpdGggdXNlcm5hbWUgKHNob3J0IFRUTCkKICAgICAgICBBdXRoU2VydmljZS0tPj5Vc2VyOiAyMDAgT0sgKG1mYVRva2VuLCBtZmFSZXF1aXJlZDogdHJ1ZSkKICAgICAgICAKICAgICAgICBVc2VyLT4-QXV0aENvbnRyb2xsZXI6IFBPU1QgL2FwaS9hdXRoL3ZlcmlmeS9tZmEgKG1mYVRva2VuLCBjb2RlKQogICAgICAgIEF1dGhDb250cm9sbGVyLT4-QXV0aFNlcnZpY2U6IHZlcmlmeU1mYSh2ZXJpZmljYXRpb25SZXF1ZXN0KQogICAgICAgIEF1dGhTZXJ2aWNlLT4-VG9rZW5SZXBvc2l0b3J5OiBHZXQgdXNlcm5hbWUgZnJvbSBtZmFUb2tlbgogICAgICAgIEF1dGhTZXJ2aWNlLT4-RGF0YWJhc2U6IEdldCBlbmNyeXB0ZWQgTUZBIHNlY3JldAogICAgICAgIEF1dGhTZXJ2aWNlLT4-QXV0aFNlcnZpY2U6IERlY3J5cHQgYW5kIFZlcmlmeSBUT1RQIGNvZGUKICAgICAgICBBdXRoU2VydmljZS0-PlRva2VuUmVwb3NpdG9yeTogUmVtb3ZlIG1mYVRva2VuCiAgICAgICAgQXV0aFNlcnZpY2UtPj5Ub2tlblJlcG9zaXRvcnk6IFN0b3JlIGZpbmFsIEpXVCB0b2tlbnMKICAgICAgICBBdXRoU2VydmljZS0tPj5Vc2VyOiAyMDAgT0sgKEFjY2Vzc1Rva2VuLCBSZWZyZXNoVG9rZW4sIG1mYVJlcXVpcmVkOiBmYWxzZSwgbWZhVmVyaWZpZWQ6IHRydWUpCiAgICBlbmQ=)
++
++### MFA Setup and Confirmation Flow
++![MFA Setup and Confirmation Flow](https://mermaid.ink/img/c2VxdWVuY2VEaWFncmFtCiAgICBwYXJ0aWNpcGFudCBVc2VyCiAgICBwYXJ0aWNpcGFudCBNZmFDb250cm9sbGVyCiAgICBwYXJ0aWNpcGFudCBNZmFTZXJ2aWNlCiAgICBwYXJ0aWNpcGFudCBFbmNyeXB0aW9uU2VydmljZQogICAgcGFydGljaXBhbnQgRGF0YWJhc2UgKFBvc3RncmVTUUwpCgogICAgTm90ZSBvdmVyIFVzZXIsIERhdGFiYXNlOiBVc2VyIG11c3QgYmUgbG9nZ2VkIGluIChCZWFyZXIgVG9rZW4pCiAgICAKICAgIFVzZXItPj5NZmFDb250cm9sbGVyOiBQT1NUIC9hcGkvbWZhL3NldHVwCiAgICBNZmFDb250cm9sbGVyLT4-TWZhU2VydmljZTogc2V0dXBNZmEodXNlcm5hbWUpCiAgICBNZmFTZXJ2aWNlLT4-TWZhU2VydmljZTogR2VuZXJhdGUgVE9UUCBzZWNyZXQKICAgIE1mYVNlcnZpY2UtPj5FbmNyeXB0aW9uU2VydmljZTogRW5jcnlwdCBzZWNyZXQKICAgIE1mYVNlcnZpY2UtPj5EYXRhYmFzZTogU2F2ZSBlbmNyeXB0ZWQgc2VjcmV0IChtZmFFbmFibGVkOiBmYWxzZSkKICAgIE1mYVNlcnZpY2UtLT4-VXNlcjogMjAwIE9LIChzZWNyZXQsIHFyQ29kZVVyaSwgcXJDb2RlSW1hZ2UpCiAgICAKICAgIFVzZXItPj5Vc2VyOiBTY2FuIFFSIGNvZGUgaW4gQXV0aGVudGljYXRvciBBcHAKICAgIAogICAgVXNlci0-Pk1mYUNvbnRyb2xsZXI6IFBPU1QgL2FwaS9tZmEvY29uZmlybSAoY29kZSkKICAgIE1mYUNvbnRyb2xsZXItPj5NZmFTZXJ2aWNlOiBjb25maXJtTWZhKHVzZXJuYW1lLCBjb2RlKQogICAgTWZhU2VydmljZS0-PkRhdGFiYXNlOiBHZXQgZW5jcnlwdGVkIHNlY3JldAogICAgTWZhU2VydmljZS0-PkVuY3J5cHRpb25TZXJ2aWNlOiBEZWNyeXB0IHNlY3JldAogICAgTWZhU2VydmljZS0-Pk1mYVNlcnZpY2U6IFZlcmlmeSBUT1RQIGNvZGUKICAgIE1mYVNlcnZpY2UtPj5EYXRhYmFzZTogU2F2ZSBtZmFFbmFibGVkOiB0cnVlCiAgICBNZmFTZXJ2aWNlLS0-Pk1mYUNvbnRyb2xsZXI6IFN1Y2Nlc3MKICAgIE1mYUNvbnRyb2xsZXItPj5NZmFDb250cm9sbGVyOiBMb2cgb3V0IHVzZXIgKEludmFsaWRhdGUgdG9rZW5zKQogICAgTWZhQ29udHJvbGxlci0tPj5Vc2VyOiAyMDAgT0sgKE1FQSBlbmFibGVkLCByZS1sb2dpbiByZXF1aXJlZCk=)
++
++## API Overview
++
++Authentication
++- POST `/api/auth/register`
++  - Request:
++    ```bash
++    curl -X POST http://localhost:8080/api/auth/register \
++         -H "Content-Type: application/json" \
++         -d '{"username":"john","password":"secret","role":"USER"}'
++    ```
++  - Response (on success): `AuthenticationResponse` with JWT tokens or an MFA challenge if MFA already enabled.
++
++- POST `/api/auth/login`
++  - Request:
++    ```bash
++    curl -X POST http://localhost:8080/api/auth/login \
++         -H "Content-Type: application/json" \
++         -d '{"username":"john","password":"secret"}'
++    ```
++  - Responses:
++    - If MFA NOT enabled:
++      ```json
++      {"accessToken":"...","refreshToken":"...","mfaRequired":false,"mfaVerified":true}
++      ```
++    - If MFA enabled (challenge):
++      ```json
++      {"mfaRequired":true,"mfaVerified":false,"mfaToken":"<temporary-mfa-token>"}
++      ```
++
++- POST `/api/auth/refresh`
++  - Request:
++    ```bash
++    curl -X POST http://localhost:8080/api/auth/refresh \
++         -H "Content-Type: application/json" \
++         -d '{"refreshToken":"<your-refresh-token>"}'
++    ```
++  - Response: new `accessToken` issued; `refreshToken` retained if valid.
++
++- POST `/api/auth/logout`
++  - Request:
++    ```bash
++    curl -X POST http://localhost:8080/api/auth/logout \
++         -H "Authorization: Bearer <your-access-token>"
++    ```
++  - Invalidates all tokens for the authenticated user in Redis.
++
++MFA Setup & Confirmation (while logged in)
++- POST `/api/mfa/setup`
++  - Request:
++    ```bash
++    curl -X POST http://localhost:8080/api/mfa/setup \
++         -H "Authorization: Bearer <your-access-token>"
++    ```
++  - Response:
++    ```json
++    {
++      "secret":"BASE32SECRET",
++      "qrCodeUri":"otpauth://totp/App:john?secret=...",
++      "qrCodeImage":"data:image/png;base64,iVBOR..."
++    }
++    ```
++  - Scan `qrCodeImage` (or use `qrCodeUri`) in Google Authenticator.
++
++- POST `/api/mfa/confirm`
++  - Request:
++    ```bash
++    curl -X POST http://localhost:8080/api/mfa/confirm \
++         -H "Authorization: Bearer <your-access-token>" \
++         -H "Content-Type: application/json" \
++         -d '{"code":"123456"}'
++    ```
++  - Response: `200 OK` on success and the user is forced to re‑login. MFA becomes active for subsequent logins.
++
++MFA Verification after Login Challenge
++- POST `/api/auth/verify/mfa`
++  - Request:
++    ```bash
++    curl -X POST http://localhost:8080/api/auth/verify/mfa \
++         -H "Content-Type: application/json" \
++         -d '{"mfaToken":"<temporary-mfa-token>","code":"123456"}'
++    ```
++  - Response (on success):
++    ```json
++    {"accessToken":"...","refreshToken":"...","mfaRequired":false,"mfaVerified":true}
++    ```
++
++## Security Notes
++- MFA secret is generated per user and stored encrypted using AES‑GCM via `EncryptionService`.
++- Temporary MFA tokens are stored in Redis with short TTL and removed after successful verification.
++- JWT validation and token blacklisting/rotation are handled by `JwtTokenProvider` and `TokenRepository`.
++
++## Project Structure (high‑level)
++- `controller/` — `AuthController`, `MfaController`
++- `service/` — `AuthService`, `MfaService`, `EncryptionService`
++- `dto/request/` — `LoginRequest`, `RegistrationRequest`, `RefreshTokenRequest`, `MfaConfirmRequest`, `VerificationRequest`
++- `dto/response/` — `AuthenticationResponse`, `TokenPair`, `MfaSetupResponse`
++- `security/` — `JwtAuthenticationFilter`, `JwtTokenProvider`
++- `repository/` — `UserRepository`, `TokenRepository`
++- `util/` — `TotpUtil`
+
+ ## Contributing
+-To contribute to this project:
+-1. Fork the repository.
+-2. Create a feature branch.
+-3. Commit your changes and submit a pull request.
++1. Fork the repository
++2. Create a feature branch
++3. Open a PR with clear description and tests where applicable
+
+ ## License
+-This project currently does not specify any licensing details. For any licensing requirements, please consult the project owner/administrator.
+-
+-## Acknowledgments
+-This project uses tools and libraries from the **Spring Ecosystem** to deliver a robust session management solution. Gratitude is extended towards the open-source community for these contributions.
++TBD
+diff --git a/src/main/resources/application.yml b/src/main/resources/application.yml
+index 51ce313..a3a1171 100644
+--- a/src/main/resources/application.yml
++++ b/src/main/resources/application.yml
+@@ -3,9 +3,9 @@ spring:
+     name: multifactor-authentication
+   # Database configurations
+   datasource:
+-    url: jdbc:postgresql://localhost:5432/mfa_demo
+-    username: postgres
+-    password: 1234
++    url: jdbc:postgresql://localhost:5432/your_database
++    username: your_username
++    password: your_password
+     driver-class-name: org.postgresql.Driver
+
+   jpa:
+@@ -45,5 +45,5 @@ mfa:
+
+ app:
+   security:
+-    encryption-key: XC5JkQ0wJNk/waJgNmUeRr1HPgJDK97YQ3KNGhdTjrw=
++    encryption-key: <BASE64_AE S_KEY> # 128/192/256-bit AES key, Base64-encoded
+   mfaTokenExpiration: 300000 # 5 minutes in milliseconds
